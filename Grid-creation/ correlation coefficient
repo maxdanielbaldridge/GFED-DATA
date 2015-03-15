@@ -1,0 +1,173 @@
+import matplotlib.pyplot as plt
+import matplotlib
+import numpy as np 
+import os
+import datetime
+import scipy.io
+import datetime
+
+mat = scipy.io.loadmat("C:\Users\yourname\Documents\Term Projects\WesternUSDisasters\Data\GFED4snew\GFED4s_BA_2003to2012_025deg.mat")
+
+mat
+
+LON_GFED = mat['LON025']
+LAT_GFED = mat['LAT025']
+time_GFED = mat ['time']
+
+BA_km025 = mat['Burned_025']
+
+BA_sum_km = np.nansum(BA_km025, axis=0)
+
+np.shape(BA_sum_km)
+
+np.shape(LON_GFED)
+
+print LON_GFED[175, 300]
+
+print LAT_GFED[175, 300]
+
+os.chdir("C:/Users/yourname/Documents/Term Projects/WesternUSDisasters/Data/GRACE_Assim_RL05/sfmc")
+
+files = os.listdir('.')
+print files
+
+SFMC = np.empty((np.size(files), 112, 244))
+
+for i,fil in enumerate(files):
+    local_filename = os.path.join('', fil)
+    test = np.fromfile(local_filename, '>f32')
+    test2 = np.reshape(test,(np.size(test)/(244*112), 112, 244))
+    test2[test2 == -999] = np.NAN
+    test3 = np.nanmean(test2, axis=0)
+    SFMC[i,:,:] = test3
+    print(i), local_filename
+    
+    latitude_GDAP = np.arange(23.875, 23.875 + 112 * 0.25, 0.25)
+
+np.size(latitude_GDAP)
+
+longitude_GDAP = np.arange(-126.875, -126.875 + 244 * 0.25, 0.25)
+
+np.size(longitude_GDAP)
+
+LAT_GDAP, LON_GDAP = np.meshgrid(latitude_GDAP, longitude_GDAP, sparse = False, indexing = 'ij')
+
+np.shape(LAT_GDAP)
+
+np.shape(LON_GDAP)
+
+print LON_GDAP[50,25], LAT_GDAP[50,25]
+print LON_GFED[50,25], LAT_GFED[50,25]
+
+lat_GFED = LAT_GFED[:]
+print lat_GFED.max(), lat_GFED.min()
+
+lon_GFED = LON_GFED[:]
+print lon_GFED.max(), lon_GFED.min()
+
+lat_GDAP = LAT_GDAP[:]
+print lat_GDAP.max(), lat_GDAP.min()
+
+lon_GDAP = LON_GDAP[:]
+print lon_GDAP.max(), lon_GDAP.min()
+
+print LON_GDAP[0,0], LAT_GDAP[0,0]
+print LON_GDAP[111,243], LAT_GDAP[111,243]
+
+##This line shows that LAT and LON_GFED[455,212] = LAT and LON_GDAP[0,0]. Cells from the GFED reference grid correspond to (x+455, y+212) on the GDAP grid
+
+
+print LON_GFED[455,212], LAT_GFED[455,212]
+print LON_GFED[566,455], LAT_GFED[566,455]
+
+whos
+
+print "LON_GDAP", LON_GDAP[57,30]
+print "LAT_GDAP", LAT_GDAP[57,30]
+print "LON_GFED", LON_GFED[512,242]
+print "LAT_GFED", LAT_GFED[512,242]
+
+np.shape(BA_km025)
+
+np.shape(SFMC)
+
+t = matplotlib.dates.drange(datetime.date(2003,1,15), datetime.date(2014,6,15), datetime.timedelta(days=30.42))
+
+plt.plot_date(t[0:120], BA_km025[:,512,242],'-k')
+
+plt.plot_date(t, SFMC[:,57,30],'-k')
+
+plt.show()
+
+GFED_US = BA_km025[:, 456:568, 212:456]
+
+SFMC_US = SFMC[0:120]
+
+whos
+
+np.corrcoef(SFMC_US[:,50,50],GFED_US[:,50,50])
+
+x_range = []
+x = 0
+while x < 244:
+    x_range.append(x)
+    x = x + 1
+    
+    y_range = []
+y = 0
+while y < 112:
+    y_range.append(y)
+    y = y + 1
+    
+    coef_list = []
+    
+    for i in y_range:
+    for j in x_range:
+        dataSFMC = SFMC_US[:,i,j]
+        dataGFED = GFED_US[:,i,j]
+        corr =  np.corrcoef(dataSFMC, dataGFED)
+        coef = corr[0][1]
+        coef_list.append(coef)
+        
+        coef_array = np.array(coef_list)
+        
+        coef_map = np.reshape(coef_array,(1, 112, 244))
+        
+        whos
+        
+        plt.pcolor(np.nanmean(coef_map, axis = 0), cmap='RdBu',vmin= -1.00, vmax = 1.00)
+cbar = plt.colorbar()
+cbar.set_label('Correlation Coefficient')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
