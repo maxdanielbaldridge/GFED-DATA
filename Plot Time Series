@@ -1,0 +1,46 @@
+import matplotlib 
+import numpy as np 
+import os
+
+os.chdir('/user_home/w_develop') #Set up your workspace, obviously will be different than this example.
+
+pwd
+
+u'/user_home/w_develop'
+import scipy.io
+mat = scipy.io.loadmat("") #Load MAT file into Python
+
+mat #Check to make sure it loaded properly
+
+LON = mat['LON025']
+LAT = mat['LAT025']
+time = mat['time']
+BA_km025 = mat['Burned_025']
+BA_Mha025 = mat['Burned_025_Mha']   #Create variables
+
+whos
+
+BA_sum_Mha = np.nansum(BA_Mha025,axis=0)
+
+np.shape(BA_sum_Mha) #add np. to make compatiable 
+
+np.shape(LON)
+
+import matplotlib.pyplot as plt #.pyplot difference *necessary
+
+import datetime
+
+t = matplotlib.dates.drange(datetime.date(2003,1,15), datetime.date(2013,6,15), datetime.timedelta(days=30.42))
+
+print LON[175,300] #Test pixel values for gathering data (i.e. not in the Ocean)
+print LAT[550,640] #These coordinates are over the US
+
+plt.plot_date(time, BA_Mha025[:,550,300],'-k')
+plt.show() #Plots time series of burned area in this pixel from 2003-2013
+
+plt.show()
+
+
+
+
+
