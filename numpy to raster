@@ -1,0 +1,13 @@
+import arcpy
+import os
+import numpy
+ 
+def Numpy_to_Raster(Folder):
+    for file in os.listdir(Folder):
+        if ".npy" in file:
+            nparray = numpy.load(file)
+            corner = arcpy.Point(-126.875, 23.875)
+            outname = file.replace(".npy", ".tif")
+            outpath = "{0}\{1}".format(Folder, outname)
+            nprast = arcpy.NumPyArrayToRaster(nparray, corner, 0.25, 0.25)
+            arcpy.Flip_management(nprast, outpath)
