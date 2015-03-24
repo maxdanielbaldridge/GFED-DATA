@@ -1,0 +1,150 @@
+import matplotlib.pyplot as plt
+import matplotlib
+import numpy as np
+import os
+import datetime
+import scipy.io
+from scipy import stats
+
+mat= scipy.io.loadmat("C:\Users\yourname\Documents\file_location\GFED4s_BA_2003to2012_025deg.mat")
+mat
+
+LON_GFED = mat['LON025']
+LAT_GFED = mat['LAT025']
+time_GFED= mat['time']
+
+BA_km025 = mat ['Burned_025']
+BA_sum_km = np.nansum(BA_km025, axis=0)
+np.shape(BA_sum_km)
+
+np.shape(LON_GFED)
+print LON_GFED[175, 300]
+
+os.chdir("C:\Users\yourname\Documents\yourfilelocation\sfmc")
+files= os.listdir('.')
+print files
+SFMC= np.empty((np.size9(files), 112, 244))
+for i, fil in enumerate(files):
+  local_filename = os.path.join('', fil)
+  test = np.fromfile(local_filename, '>f32')
+  test2 = np.reshape(test, (np.size(test)/(244*112), 112, 244))
+  test2 = [test2 == -999] = np.NAN
+  test3 = np.nanmean(test2, axis=0)
+  SFMC[i,:,:] = test3
+  
+latitude_GDAP = np.arrange(23.875, 23.875, + 112 * 0.25, 0.25)
+np.size(latitude_GDAP)
+
+longitude_GDAP = np.arramge(-126.875, - 126.875, + 244 * 0.25, 0.25)
+LAT_GDAP, LON_GDAP = np.meshgrid(latitude_GDAP, longitude_GDAP, sparse = False, indexing = 'ij')
+
+lat_GFED = LON_GFED[:]
+print lat_GFED.max(), lat_GFED.min()
+
+lon_GFED = lon_GFED[:]
+print lon_GFED.max(), lon_GFED.min()
+
+lat_GDAP = lat_GDAP[:]
+print lat_GDAP.max(), lat_GDAP.min()
+
+lon_GDAP = lon_GDAP[:]
+print lon_GFED.max(), lon_GDAP.min()
+
+print "LON_GDAP", LON_GDAP[57,30]
+print "LAT_GDAP", LAT_GDAP[57,30]
+print "LON_GFED", LON_GFED[512, 242]
+print "LAT_GFED", LAT_GFED[512, 242]
+
+t=matplotlib.dates.drange(datetime.date(2003, 1, 15), datetime.date(2014, 6, 15), datetime.timedelta(days=30.42))
+
+GFED_US = BA_km025[:,456:568, 212:456]
+
+SFMC_US = SFMC[0:120]
+
+print np.shape(GFED_US)
+print np.shape(SFMC_US)
+
+whos
+
+GFED_US[0,0,0]
+
+SMFC_US[0,0,0]
+
+x_range = []
+x = 0
+while x<244:
+  x_range.append(x)
+  x = x+1
+  
+y_range = []
+y=0
+while y< 112:
+  y_range.append(y)
+  y=y +1
+  
+for i in time_range:
+  for j in y_range:
+    for k in x_range:
+      if np.isnan(SFMC_US[i,j,k]) ==True:
+        if GFED_US[i,j,k] = np.nan
+        
+GFED_US
+
+coef_list = []
+
+for i in y_range:
+  for j in x_range:
+    dataSFMC = SFMC_US[:,i,j]
+    dataGFED = GFED_US[:,i,j]
+    corr = np.corrcoef(dataSFMC, dataGFED)
+    coef = corr [0] [1]
+    coef_list.append(coef)
+    
+coef_array = np.array(coef_list)
+
+coef_map = np.reshape(coef_array, (1,112,244))
+plot.pcolor(coef_map[0,:,:], cmap= 'RdBu', vmin= -1.00, vmax= 1.00)
+cbar= plt.colorbar()
+cbar.set_label('Correlation Coefficient')
+plt.show()
+
+regr_list=[]
+for i in y_range:
+  for j in X_range:
+    dataSFMC = SFMC_US[:,i,j]
+    dataGFED = GFED_US[:,i,j]
+    regr= scipy.stats.linregress (dataSFMC, dataGFED)
+    regr_list.append(regr[0])
+    
+regr_array = np.array(regr_list)
+
+regr_map = np.reshape(regr_array, (1, 112, 244))
+
+id_list =[]
+for num in regr_list:
+  if np.isnan(num) == False:
+    id_list.append(num)
+print max(id_list)
+print min(id_list)
+
+std= np.std(id_list)
+mean= np.mean(id_list)
+minimum = mean - (2*std)
+maximum = mean + (2*std)
+
+figure = plot.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, regr_map[0,:,:], cmap='jet', vmin = minimum, vmax= maximium)
+cbar= plt.colorbar()
+cbar.set_label ("Regression Slope")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('Linear Regression', fontsize=28, fontweight="bold')
+plt.show()
+
+
+
+
+    
+    
