@@ -1,0 +1,108 @@
+# Updated version of GFED_US_SFMC_ALIGNED_ARRAYS because that file would not load in Wakarai.
+# This code shows how to get GFED_US in an array same extent as SFMC to then start correlations.
+
+# In[1]:
+
+import matplotlib.pyplot as plt
+import matplotlib
+import numpy as np 
+import os
+import datetime
+import scipy.io
+import datetime
+
+
+# In[3]:
+
+os.chdir('/Users/yourname/Desktop/GFED')
+
+
+# In[5]:
+
+mat = scipy.io.loadmat("GFED4s_BA_2003to2012_025deg.mat")
+
+
+# In[6]:
+
+mat
+
+
+# In[7]:
+
+LON = mat['LON025']
+LAT = mat['LAT025']
+time = mat['time']
+BA_km025 = mat['Burned_025']
+BA_Mha025 = mat['Burned_025_Mha'] 
+
+
+# In[8]:
+
+#Load SFMC
+#DELETE EXTRA BIN FILES. ONLY KEEP 120 FILES DATES 2003.01 - 2012.12
+os.chdir('/Users/yourname/Desktop/GRACE/sfmc')
+
+
+# In[9]:
+
+files = os.listdir('.')
+print files
+
+
+# In[10]:
+
+SFMC = np.empty((np.size(files), 112, 244))
+for i,fil in enumerate(files):
+    local_filename = os.path.join('', fil)
+    test = np.fromfile(local_filename, '>f32')
+    test2 = np.reshape(test,(np.size(test)/(244*112), 112, 244))
+    test2[test2 == -999] = np.NAN
+    test3 = np.nanmean(test2, axis=0)
+    SFMC[i,:,:] = test3
+    print(i)
+
+
+# In[11]:
+
+#Make sure you have correct amount of files above ^
+time_DAP = matplotlib.dates.drange(datetime.date(2003,1,15), datetime.date(2012,12,15), datetime.timedelta(days=30.42))
+
+
+# In[12]:
+
+time_FED = matplotlib.dates.drange(datetime.date(2003,1,15), datetime.date(2012,12,15), datetime.timedelta(days=30.42))
+
+
+# In[13]:
+
+print LAT[456,212]
+print LON[456,212]
+
+
+# In[14]:
+
+print LAT[456,456]
+print LON[456,456]
+
+
+# In[15]:
+
+print LAT[568,456]
+print LON[568,456]
+
+
+# In[16]:
+
+print LAT[568,212]
+print LON[568,212]
+
+
+# In[17]:
+
+#CREATE THE NEW GFED ARRAY
+GFED_US = BA_km025[:,456:568,212:456]
+
+
+# In[18]:
+
+whos
