@@ -143,6 +143,132 @@ plt.ylabel("Degrees Latitude")
 plt.title('Linear Regression', fontsize=28, fontweight="bold')
 plt.show()
 
+SFMC03 = SFMC_US[0:12,:,:]
+SFMC04 = SFMC_US[12:24,:,:]
+SFMC05 = SFMC_US[24:36,:,:]
+SFMC06 = SFMC_US[36:48,:,:]
+SFMC07 = SFMC_US[48:60,:,:]
+SFMC08 = SFMC_US[60:72,:,:]
+SFMC09 = SFMC_US[72:84,:,:]
+SFMC10 = SFMC_US[84:96,:,:]
+SFMC11 = SFMC_US[96:108,:,:]
+SFMC12 = SFMC_US[108:120,:,:]
+
+GFED03 = GFED_US[0:12,:,:]
+GFED04 = GFED_US[12:24,:,:]
+GFED05 = GFED_US[24:36,:,:]
+GFED06 = GFED_US[36:48,:,:]
+GFED07 = GFED_US[48:60,:,:]
+GFED08 = GFED_US[60:72,:,:]
+GFED09 = GFED_US[72:84,:,:]
+GFED10 = GFED_US[84:96,:,:]
+GFED11 = GFED_US[96:108,:,:]
+GFED12 = GFED_US[108:120,:,:
+
+S_yr_list = [SFMC03,SFMC04,SFMC05,SFMC06,SFMC07,SFMC08,SFMC09,SFMC10,SFMC11,SFMC12]
+G_yr_list = [GFED03,GFED04,GFED05,GFED06,GFED07,GFED08,GFED09,GFED10,GFED11,GFED12]
+
+GFED_avg = []
+for G_yr in G_yr_list:
+    for i in y_range:
+        for j in x_range:
+            GFEDavg = np.nanmean(G_yr[:,i,j])
+            GFED_avg.append(GFEDavg)
+            
+GFED_arr = np.array(GFED_avg)
+GFED_map = np.reshape(GFED_arr, (10,112,244))
+
+SFMC_avg = []
+for S_yr in S_yr_list:
+    for i in y_range:
+        for j in x_range:
+            SFMCavg = np.nanmean(S_yr[:,i,j])
+            SFMC_avg.append(SFMCavg)
+SFMC_arr = np.array(SFMC_avg)
+SFMC_map = np.reshape(SFMC_arr, (10,112,244))
+
+plt.pcolor(SFMC_map[0,:,:], cmap='RdBu',vmin= -1, vmax = 1)
+cbar = plt.colorbar()
+plt.show()
+
+x = [0,1,2,3,4,5,6,7,8,9]
+y = GFED_map[:,51,123]
+y2 = SFMC_map[:,51,123]
+
+fig = plt.figure()
+rect = fig.patch
+rect.set_facecolor('white')
+ax = fig.add_subplot(111)
+ax.plot(x, y, label = 'GFED Burned area')
+ax2 = ax.twinx()
+ax2.set_ylim([0,0.5])
+ax.set_ylim([0,20])
+ax.yaxis.label.set_color('blue')
+ax2.yaxis.label.set_color('red')
+ax.set_xlabel("Time (month)")
+ax.set_ylabel("Burned Area (km^2)")
+ax2.set_ylabel("Surface Soil Moisture (%)")
+ax2.plot(x, y2, '-r', label = 'Soil Moisture')
+ax.legend(loc=2).draggable()
+ax2.legend(loc=0).draggable()
+plt.show()
+
+print LON_GDAP[52, 68]
+print LAT_GDAP[52, 68]
+
+coef_list_avg = []
+for i in y_range:
+    for j in x_range:
+        corr_avg =  np.corrcoef(SFMC_map[:,i,j], GFED_map[:,i,j])
+        coef_avg = corr_avg[0][1]
+        coef_list_avg.append(coef_avg)
+        
+coef_array_avg = np.array(coef_list_avg)
+coef_map_avg = np.reshape(coef_array_avg,(1, 112, 244))
+
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, coef_map_avg[0,:,:], cmap='RdBu',vmin= -1.00, vmax = 1.00)
+cbar = plt.colorbar()
+cbar.set_label("Pearson's Correlation Coefficient")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('Annual Average Correlation', fontsize=26, fontweight='bold')
+plt.show()
+
+regr_list_avg = []
+for i in y_range:
+    for j in x_range:
+        regr_avg = scipy.stats.linregress(SFMC_map[:,i,j], GFED_map[:,i,j])
+        regr_list_avg.append(regr_avg[0])       
+        
+regr_arr_avg = np.array(regr_list_avg)
+regr_map_avg = np.reshape(regr_arr_avg,(1, 112, 244))
+
+id_list_avg = []
+for num in regr_list_avg:
+    if np.isnan(num) == False:
+        id_list_avg.append(num)
+print max(id_list_avg)
+print min(id_list_avg)
+
+std_avg = np.std(id_list_avg)
+mean_avg = np.mean(id_list_avg)
+minimum_avg = mean_avg - (2*std_avg)
+maximum_avg = mean_avg + (2*std_avg)
+
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, regr_map_avg[0,:,:], cmap='jet',vmin= minimum_avg, vmax = maximum_avg)
+cbar = plt.colorbar()
+cbar.set_label("Regression Slope")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('Regression Analysis - Annual Avg', fontsize=22, fontweight='bold')
+plt.show()
+
 
 
 
