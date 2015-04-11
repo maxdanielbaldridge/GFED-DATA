@@ -1,0 +1,398 @@
+import matplotlib.pyplot as plt
+import matplotlib
+import numpy as np 
+import os
+import datetime
+import scipy.io
+import datetime
+from scipy import stats
+
+mat = scipy.io.loadmat("C:\Users\yourname\Documents\Term Projects\yourfilelocation\Data\GFED4snew\GFED4s_BA_2003to2012_025deg.mat)
+
+
+LON_GFED = mat['LON025']
+LAT_GFED = mat['LAT025']
+time_GFED = mat ['time']
+
+BA_km025 = mat['Burned_025']
+BA_sum_km = np.nansum(BA_km025, axis=0)
+
+os.chdir("C:\Users\yourname\Documents\Term Projects\yourfilelocation\Data\GRACE_Assim_RL05\sfmc")
+
+
+files = os.listdir('.')
+SFMC = np.empty((np.size(files), 112, 244))
+
+for i,fil in enumerate(files):
+    local_filename = os.path.join('', fil)
+    test = np.fromfile(local_filename, '>f32')
+    test2 = np.reshape(test,(np.size(test)/(244*112), 112, 244))
+    test2[test2 == -999] = np.NAN
+    test3 = np.nanmean(test2, axis=0)
+    SFMC[i,:,:] = test3
+    
+latitude_GDAP = np.arange(23.875, 23.875 + 112 * 0.25, 0.25)
+longitude_GDAP = np.arange(-126.875, -126.875 + 244 * 0.25, 0.25)
+
+LAT_GDAP, LON_GDAP = np.meshgrid(latitude_GDAP, longitude_GDAP, sparse = False, indexing = 'ij')
+t = matplotlib.dates.drange(datetime.date(2003,1,15), datetime.date(2014,6,15), datetime.timedelta(days=30.42))
+GFED_US = BA_km025[:, 456:568, 212:456]
+SFMC_US = SFMC[0:120]
+os.chdir("C:\Users\yourname\Documents\Term Projects\yourfilelocation\Data\Raster")
+
+x_range = range(0, 244)
+y_range = range(0, 112)
+time_range = range(0, 120)
+
+for i in time_range:
+    for j in y_range:
+        for k in x_range:
+            if np.isnan(SFMC_US[i,j,k]) == True:
+                GFED_US[i,j,k] = np.nan
+#CORRELATION ANALYSIS
+
+coef_list = []
+for i in y_range:
+    for j in x_range:
+        dataSFMC = SFMC_US[:,i,j]
+        dataGFED = GFED_US[:,i,j]
+        corr =  np.corrcoef(dataSFMC, dataGFED)
+        coef = corr[0][1]
+        coef_list.append(coef)
+coef_array = np.array(coef_list)
+coef_map = np.reshape(coef_array,(1, 112, 244))
+
+#Monthly Correlation Save .npy
+#np.save("Monthly_Corr", coef_map)
+plt.pcolor(coef_map[0,:,:], cmap='RdBu',vmin= -1.00, vmax = 1.00)
+cbar = plt.colorbar()
+cbar.set_label('Correlation Coefficient')
+plt.show()
+
+#REGRESSION ANALYSIS
+
+regr_list = []
+b_list = []
+for i in y_range:
+    for j in x_range:
+        dataSFMC = SFMC_US[:,i,j]
+        dataGFED = GFED_US[:,i,j]
+        regr = scipy.stats.linregress(dataSFMC, dataGFED)
+        regr_list.append(regr[0])
+        b_list.append(regr[1])
+regr_array = np.array(regr_list)
+regr_map = np.reshape(regr_array,(1, 112, 244))
+std = np.nanstd(regr_array)
+mean = np.nanmean(regr_array)
+minimum = mean - (2*std)
+maximum = mean + (2*std)
+
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, regr_map[0,:,:], cmap='jet',vmin= minimum, vmax = maximum)
+cbar = plt.colorbar()
+cbar.set_label("Regression Slope")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('Linear Regression', fontsize=28, fontweight='bold')
+plt.show()
+
+#Monthly Regression Save .npy
+#np.save("Monthly_Regr", regr_map)
+
+#VALIDATION
+
+b_array = np.array(b_list)
+b_map = np.reshape(b_array,(1, 112, 244))
+
+#np.save("Monthly_b", b_map)
+
+pred_BA_list = []
+
+for i in time_range:
+    for j in y_range:
+        for k in x_range:
+            pred_BA = regr_map[0,j,k] * SFMC_US[i,j,k] + b_map[0,j,k]
+            pred_BA_list.append(pred_BA)
+pred_BA_arr = np.array(pred_BA_list)
+pred_BA_map = np.reshape(pred_BA_arr, (120, 112, 244))
+BA_coef_list = []
+for i in y_range:
+    for j in x_range:
+        dataGFED_pred = pred_BA_map[:,i,j]
+        dataGFED = GFED_US[:,i,j]
+        BA_corr =  np.corrcoef(dataGFED_pred, dataGFED)
+        BA_coef = BA_corr[0][1]
+        BA_coef_list.append(BA_coef)
+BA_coef_array = np.array(BA_coef_list)
+BA_coef_map = np.reshape(BA_coef_array, (1, 112, 244))
+
+BA_std = np.nanstd(BA_coef_array)
+BA_mean = np.nanmean(BA_coef_array)
+BA_max = 2*BA_std + BA_mean
+
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, BA_coef_map[0,:,:], cmap='YlGn',vmin = 0, vmax = BA_max)
+cbar = plt.colorbar()
+cbar.set_label("Pearson's Correlation Coefficient")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('Predicted Burned Area Correlation', fontsize=20, fontweight='bold')
+plt.show()
+
+np.save("Validation_coef", BA_coef_map)
+
+DEC04_list = []
+for i in y_range:
+    for j in x_range:
+        dataGFED_pred = pred_BA_map[:,i,j]
+        dataGFED = GFED_US[:,i,j]
+        BA_corr =  np.corrcoef(dataGFED_pred, dataGFED)
+        BA_coef = BA_corr[0][1]
+        BA_coef_list.append(BA_coef)
+
+#MONTHLY PREDICTIONS
+
+pred_1204_list = []
+
+for j in y_range:
+    for k in x_range:
+        pred_1204_BA = regr_map[0,j,k] * SFMC_US[23,j,k] + b_map[0,j,k]
+        pred_1204_list.append(pred_1204_BA)
+            
+pred_1204_arr = np.array(pred_1204_list)
+pred_1204_map = np.reshape(pred_1204_arr, (1, 112, 244))
+
+pred_1210_list = []
+
+for j in y_range:
+    for k in x_range:
+        pred_1210_BA = regr_map[0,j,k] * SFMC_US[95,j,k] + b_map[0,j,k]
+        pred_1210_list.append(pred_1210_BA)
+            
+pred_1210_arr = np.array(pred_1210_list)
+pred_1210_map = np.reshape(pred_1210_arr, (1, 112, 244))
+
+pred_0705_list = []
+
+for j in y_range:
+    for k in x_range:
+        pred_0705_BA = regr_map[0,j,k] * SFMC_US[30,j,k] + b_map[0,j,k]
+        pred_0705_list.append(pred_0705_BA)
+            
+pred_0705_arr = np.array(pred_0705_list)
+pred_0705_map = np.reshape(pred_0705_arr, (1, 112, 244))
+pred_0711_list = []
+
+for j in y_range:
+    for k in x_range:
+        pred_0711_BA = regr_map[0,j,k] * SFMC_US[102,j,k] + b_map[0,j,k]
+        pred_0711_list.append(pred_0711_BA)
+            
+pred_0711_arr = np.array(pred_0711_list)
+pred_0711_map = np.reshape(pred_0711_arr, (1, 112, 244))
+
+os.chdir("C:\Users\yourname\Documents\Term Projects\yourfilelocation\Data\Validation")
+
+np.save("12_04_Pred",pred_1204_map)
+np.save("12_10_Pred",pred_1210_map)
+np.save("07_05_Pred",pred_0705_map)
+np.save("07_11_Pred",pred_0711_map)
+
+np.save("12_04_GFED",GFED_US[23,:,:])
+np.save("12_10_GFED",GFED_US[95,:,:])
+np.save("07_05_GFED",GFED_US[30,:,:])
+np.save("07_11_GFED",GFED_US[102,:,:])
+
+gmap = SFMC_US[102,:,:]
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, gmap, cmap='RdBu',vmin = 0, vmax = np.nanmax(gmap))
+cbar = plt.colorbar()
+cbar.set_label("SFMC")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('SFMC July 2011', fontsize=20, fontweight='bold')
+plt.show()
+
+#ANNUAL AVERAGES
+
+SFMC03 = SFMC_US[0:12,:,:]
+SFMC04 = SFMC_US[12:24,:,:]
+SFMC05 = SFMC_US[24:36,:,:]
+SFMC06 = SFMC_US[36:48,:,:]
+SFMC07 = SFMC_US[48:60,:,:]
+SFMC08 = SFMC_US[60:72,:,:]
+SFMC09 = SFMC_US[72:84,:,:]
+SFMC10 = SFMC_US[84:96,:,:]
+SFMC11 = SFMC_US[96:108,:,:]
+SFMC12 = SFMC_US[108:120,:,:]
+
+GFED03 = GFED_US[0:12,:,:]
+GFED04 = GFED_US[12:24,:,:]
+GFED05 = GFED_US[24:36,:,:]
+GFED06 = GFED_US[36:48,:,:]
+GFED07 = GFED_US[48:60,:,:]
+GFED08 = GFED_US[60:72,:,:]
+GFED09 = GFED_US[72:84,:,:]
+GFED10 = GFED_US[84:96,:,:]
+GFED11 = GFED_US[96:108,:,:]
+GFED12 = GFED_US[108:120,:,:]
+
+S_yr_list = [SFMC03,SFMC04,SFMC05,SFMC06,SFMC07,SFMC08,SFMC09,SFMC10,SFMC11,SFMC12]
+
+G_yr_list = [GFED03,GFED04,GFED05,GFED06,GFED07,GFED08,GFED09,GFED10,GFED11,GFED12]
+
+GFED_avg = []
+for G_yr in G_yr_list:
+    for i in y_range:
+        for j in x_range:
+            GFEDavg = np.nanmean(G_yr[:,i,j])
+            GFED_avg.append(GFEDavg)
+            
+GFED_arr = np.array(GFED_avg)
+GFED_map = np.reshape(GFED_arr, (10,112,244))
+
+gmap = SFMC_US[5,:,:]
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, gmap, cmap='RdBu',vmin = 0, vmax = np.nanmax(gmap))
+cbar = plt.colorbar()
+cbar.set_label("Burned Area")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('Burned Area', fontsize=20, fontweight='bold')
+plt.show()
+
+SFMC_avg = []
+for S_yr in S_yr_list:
+    for i in y_range:
+        for j in x_range:
+            SFMCavg = np.nanmean(S_yr[:,i,j])
+            SFMC_avg.append(SFMCavg)
+            
+SFMC_arr = np.array(SFMC_avg)
+SFMC_map = np.reshape(SFMC_arr, (10,112,244))
+
+#Average Annual SFMC Save .npy
+#np.save("2003_SFMC", SFMC_map[0,:,:])
+
+x = [0,1,2,3,4,5,6,7,8,9]
+y = GFED_map[:,51,123]
+y2 = SFMC_map[:,51,123]
+
+fig = plt.figure()
+rect = fig.patch
+rect.set_facecolor('white')
+ax = fig.add_subplot(111)
+ax.plot(x, y, label = 'GFED Burned area')
+ax2 = ax.twinx()
+ax2.set_ylim([0,0.5])
+ax.set_ylim([0,20])
+ax.yaxis.label.set_color('blue')
+ax2.yaxis.label.set_color('red')
+ax.set_xlabel("Time (month)")
+ax.set_ylabel("Burned Area (km^2)")
+ax2.set_ylabel("Surface Soil Moisture (%)")
+ax2.plot(x, y2, '-r', label = 'Soil Moisture')
+ax.legend(loc=2).draggable()
+ax2.legend(loc=0).draggable()
+plt.show()
+
+coef_list_avg = []
+for i in y_range:
+    for j in x_range:
+        corr_avg =  np.corrcoef(SFMC_map[:,i,j], GFED_map[:,i,j])
+        coef_avg = corr_avg[0][1]
+        coef_list_avg.append(coef_avg)
+        
+coef_array_avg = np.array(coef_list_avg)
+coef_map_avg = np.reshape(coef_array_avg,(1, 112, 244))
+
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, coef_map_avg[0,:,:], cmap='RdBu',vmin= -1.00, vmax = 1.00)
+cbar = plt.colorbar()
+cbar.set_label("Pearson's Correlation Coefficient")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('Annual Average Correlation', fontsize=26, fontweight='bold')
+plt.show()
+
+#Annual Average Correlation Save .npy
+#np.save("Annual_Corr", coef_map_avg)
+
+regr_list_avg = []
+for i in y_range:
+    for j in x_range:
+        regr_avg = scipy.stats.linregress(SFMC_map[:,i,j], GFED_map[:,i,j])
+        regr_list_avg.append(regr_avg[0])       
+        
+regr_arr_avg = np.array(regr_list_avg)
+regr_map_avg = np.reshape(regr_arr_avg,(1, 112, 244))
+
+id_list_avg = []
+for num in regr_list_avg:
+    if np.isnan(num) == False:
+        id_list_avg.append(num)
+print max(id_list_avg)
+print min(id_list_avg)
+
+std_avg = np.std(id_list_avg)
+mean_avg = np.mean(id_list_avg)
+minimum_avg = mean_avg - (2*std_avg)
+maximum_avg = mean_avg + (2*std_avg)
+
+#706.274387298
+-775.280333924
+
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, regr_map_avg[0,:,:], cmap='jet',vmin= minimum_avg, vmax = maximum_avg)
+cbar = plt.colorbar()
+cbar.set_label("Regression Slope")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('Regression Analysis - Annual Avg', fontsize=22, fontweight='bold')
+plt.show()
+
+#Annual Average Regression Save .npy
+#np.save("Annual_Regr", regr_map_avg)
+
+ind = 6
+std_ind = np.nanstd(GFED_US[ind])
+mean_ind = np.nanmean(GFED_US[ind])
+min_ind = mean_ind - (2*std_ind)
+max_ind = mean_ind + (2*std_ind)
+
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, GFED_US[ind], cmap='afmhot_r',vmin= 0.00, vmax = max_ind)
+cbar = plt.colorbar()
+cbar.set_label("Burned Area (km^2)")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('GFED Burned Area, July 2003', fontsize=20, fontweight='bold')
+plt.show()
+
+sfmc_max = np.nanmax(SFMC[ind])
+
+figure = plt.figure()
+figure.patch.set_facecolor("white")
+plt.pcolor(LON_GDAP, LAT_GDAP, SFMC_US[ind], cmap='RdBu',vmin= 0.00, vmax = sfmc_max)
+cbar = plt.colorbar()
+cbar.set_label("Soil Moisture (%)")
+plt.axis([-126.875, -66.125, 23.875, 51.625])
+plt.xlabel("Degrees Longitude")
+plt.ylabel("Degrees Latitude")
+plt.title('GRACE Derived Soil Moisture, July 2003', fontsize=20, fontweight='bold')
+plt.show()
+
