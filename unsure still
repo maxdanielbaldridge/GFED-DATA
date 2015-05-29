@@ -1,0 +1,9 @@
+from ftplib import FTP
+import os
+ftp = FTP('gs6143shinano.gsfc.nasa.gov')
+ftp.login()
+
+ftp.cwd('pub/DM/GRACE_Assim_RL05/')  # change into directory
+ftp.retrlines('LIST')   
+
+os.chdir('/user_home/GRACE_DA/sfmc')
